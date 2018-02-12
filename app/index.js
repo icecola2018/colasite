@@ -36,7 +36,7 @@ if (!process.env['DEBUG']) {
 app.use(session(sess));
 
 
-var auth = require('./auth/router');
+var auth = require('./service/auth/router');
 app.use(auth);
 
 

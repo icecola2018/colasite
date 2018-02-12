@@ -227,10 +227,11 @@ var register = function (req, res) {
     res.end();
 };
 
-
-exports.init = checkSession;
-exports.status = getStatus;
-exports.captcha = getCaptcha;
-exports.login = tryLogin;
-exports.logout = tryLogout;
-exports.register = register;
+module.exports = {
+    init: checkSession,
+    status: getStatus,
+    captcha: getCaptcha,
+    login: tryLogin,
+    logout: tryLogout,
+    register: register
+}

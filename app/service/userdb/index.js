@@ -1,4 +1,4 @@
-var conf = require('../config');
+var conf = require('../../config');
 var bcrypt = require('bcrypt');
 var debug = require('debug')('app:userdb');
 
@@ -13,7 +13,7 @@ if (dbpath) {
     try {
         var str = fs.readFileSync(dbpath, { encoding: 'utf8' });
         db = JSON.parse(str);
-    } catch (err) { 
+    } catch (err) {
         dbpath = '';
         debug(err);
         debug('Cannot read file.');
@@ -108,7 +108,9 @@ var setInfo = function (username, info, callback) {
     }
 };
 
-exports.addUser = addUser;
-exports.setPassword = setPassword;
-exports.setInfo = setInfo;
-exports.verify = verify;
+module.exports = {
+    addUser: addUser,
+    setPassword: setPassword,
+    setInfo: setInfo,
+    verify: verify
+}
