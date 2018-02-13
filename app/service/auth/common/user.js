@@ -1,6 +1,6 @@
-var conf = require('../../config');
+var conf = require('../../../config');
 var bcrypt = require('bcrypt');
-var debug = require('debug')('app:userdb');
+var debug = require('debug')('app:user');
 
 var fs = require('fs');
 
@@ -11,7 +11,7 @@ var writing = false;
 
 if (dbpath) {
     try {
-        var str = fs.readFileSync(dbpath, { encoding: 'utf8' });
+        var str = fs.readFileSync(dbpath, {encoding: 'utf8'});
         db = JSON.parse(str);
     } catch (err) {
         dbpath = '';
@@ -19,11 +19,11 @@ if (dbpath) {
         debug('Cannot read file.');
     }
 
-    var interval = setInterval(function () { 
-        if (!dbpath) { 
+    var interval = setInterval(function () {
+        if (!dbpath) {
             clearInterval(interval);
         }
-        if (updated && !writing) { 
+        if (updated && !writing) {
             try {
                 writing = true;
                 fs.writeFileSync(dbpath, JSON.stringify(db));
@@ -39,41 +39,41 @@ if (dbpath) {
 
 var verify = function (username, password, callback) {
     if (db[username]) {
-        bcrypt.compare(password, db[username].password, function (err, res) { 
+        bcrypt.compare(password, db[username].password, function (err, res) {
             if (err) {
                 debug(err);
                 debug('compare failed');
                 callback(new Error('compare failed'));
-            } else { 
+            } else {
                 callback(undefined, res);
             }
         });
-    } else { 
+    } else {
         callback(new Error('no such user'));
     }
 };
 
 var setPassword = function (username, password, callback) {
     if (db[username]) {
-        var onCreate = !db[username].password;
-        bcrypt.hash(password, 9, function (err, hash) { 
+        var onCreate = db[username].status === 'init';
+        bcrypt.hash(password, 9, function (err, hash) {
             if (err) {
                 debug(err);
                 debug('hash failed.');
-                if (onCreate) { 
+                if (onCreate) {
                     delete db[username];
                 }
                 callback(new Error('hash failed'));
-            } else { 
+            } else {
                 db[username].password = hash;
-                if (onCreate) { 
+                if (onCreate) {
                     db[username].status = 'normal';
                 }
                 updated = true;
                 callback();
             }
         });
-    } else { 
+    } else {
         callback(new Error('no such user'));
     }
 };
@@ -85,32 +85,24 @@ var addUser = function (username, password, callback) {
         db[username] = {
             'username': username,
             'status': 'init',
-            'register-date': (new Date()).toUTCString(),
-            'info': {
-                'nickname': username,
-                'greeting': 'Hello!'
-            }
+            'register-date': (new Date()).toUTCString()
         }
         setPassword(username, password, callback);
     }
 };
 
-var setInfo = function (username, info, callback) {
+
+var userStatus = function (username, callback) {
     if (db[username]) {
-        var userinfo = db[username]['info'];
-        for (var key in info) {
-            userinfo[key] = info[key];
-        }
-        updated = true;
-        callback();
-    } else { 
+        callback(null, db[username].status);
+    } else {
         callback(new Error('no such user'));
     }
-};
+}
 
 module.exports = {
+    userStatus: userStatus,
     addUser: addUser,
     setPassword: setPassword,
-    setInfo: setInfo,
     verify: verify
 }

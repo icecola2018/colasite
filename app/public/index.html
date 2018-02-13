@@ -3,131 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captcha</title>
+    <title>Auth</title>
     
     <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
     <script>
         login = '';
-        ignore = true;
+        need = false;
         submiting = false;
 
-        function refreshCaptcha() {
+        function refresh() {
             updateStatus(function(){
-                if (!ignore) {
+                if (need) {
                     $('img').attr("src", "/auth/captcha?" + (new Date()).getTime());
                     $('#num').val('');
                 }
             });
         }
         function enter(event) {
-            if (!submiting) {
+            if (!login) {
                 if (event.keyCode == 13) {
                     submitRegister();
                 }
             }
         }
+        function hide(el) {
+            $(el).addClass('hide');
+        }
+        function show(el) {
+            $(el).removeClass('hide');
+        }
         function updateStatus(callback) {
             $.get('/auth/status', function (result) {
                 login = result.login;
-                ignore = result.ignore;
-                if (ignore) {
-                    $('#captcha').css('display', 'none');
+                need = result.needCaptcha;
+                if (need) {
+                    show('#captcha');
                 } else {
-                    $('#captcha').css('display', 'block');
+                    hide('#captcha');
                 }
                 if (login) {
-                    $('#reg-form').css('display', 'none');
-                    $('#content').css('display', 'block');
+                    hide('#reg-form');
+                    show('#content');
                     $('#name').text(login);
                 } else {
-                    $('#content').css('display', 'none');
-                    $('#reg-form').css('display', 'block');
+                    hide('#content');
+                    show('#reg-form');
                 }
+                callback();
+            }).fail(function(){
                 callback();
             });
         }
         function startSubmit() {
             $('#reg').attr('disabled', true);
+            $('#num').attr('disabled', true);
+            $('#un').attr('disabled', true);
+            $('#pw').attr('disabled', true);
             submiting = true;
         }
         function endSubmit() {
-            refreshCaptcha();
+            refresh();
             $('#reg').attr('disabled', false);
+            $('#num').attr('disabled', false);
+            $('#un').attr('disabled', false);
+            $('#pw').attr('disabled', false);
+            $('#pw').val('');
+            $('#num').val('');
             submiting = false;
         }
+        
+        function checkCaptcha(number, callback) {
+            if (need) {
+                $.post('/auth/captcha', {
+                    captcha: number
+                }, function (result) {
+                    if (result.fail) {
+                        $('#numx').text('X 错误的验证码');
+                        show('#numx');
+                    }
+                    callback(!result.fail);
+                }).error(function(){
+                    callback();
+                });
+            } else {
+                callback(true)
+            }
+        }
+
         function submitRegister() {
             startSubmit();
-
             var cpc = $('#num').val();
             var un = $('#un').val();
             var pw = $('#pw').val();
-
-            $.post('/auth/register', {
-                captcha: cpc,
-                username: un,
-                password: pw
-            }, function (result) {
-                $('#reg-form span').css('display', 'none');
-                if (result.success || result.fail['user-exists']) {
-                    $.post('/auth/login', {
+            checkCaptcha(cpc, function (pass) {
+                if (!pass) {
+                    endSubmit();
+                } else {
+                    $.post('/auth/register', {
                         username: un,
                         password: pw
                     }, function (result) {
-                        if (!result.success) {
-                            if (result.fail['bad-captcha']) {
-                                $('#numx').css('display', 'inline');
-                            }
-                            var unerr = result.fail['bad-username'] || result.fail['no-user'];
+                        hide('#reg-form span');
+                        if (result.success || result.fail['user-exists']) {
+                            $.post('/auth/login', {
+                                username: un,
+                                password: pw
+                            }, function (result) {
+                                if (!result.success) {
+                                    var unerr = result.fail['bad-username'] || result.fail['no-user'];
+                                    if (unerr) {
+                                        $('#unx').text('X ' + unerr);
+                                        show('#unx');
+                                    }
+                                    var pwerr = result.fail['bad-password'] || result.fail['wrong-password'];
+                                    if (pwerr) {
+                                        $('#pwx').text('X ' + pwerr);
+                                        show('#pwx');
+                                    }
+                                }
+                                endSubmit();
+                            }).error(function () {
+                                endSubmit();
+                            });
+                        } else {
+                            var unerr = result.fail['bad-username'];
                             if (unerr) {
-                                $('#unx').css('display', 'inline');
-                                $('#unx').text('X' + unerr);
+                                $('#unx').text('X ' + unerr);
+                                show('#unx');
                             }
-                            var pwerr = result.fail['bad-password'] || result.fail['wrong-password'];
+                            var pwerr = result.fail['bad-password'];
                             if (pwerr) {
-                                $('#pwx').css('display', 'inline');
-                                $('#pwx').text('X' + pwerr);
+                                $('#pwx').text('X ' + pwerr);
+                                show('#pwx');
                             }
+                            endSubmit();
                         }
-                        endSubmit();
-                    }).error(function () {
+                    }).error(function() {
                         endSubmit();
                     });
-                } else {
-                    if (result.fail['bad-captcha']) {
-                        $('#numx').css('display', 'inline');
-                    }
-                    var unerr = result.fail['bad-username']
-                    if (unerr) {
-                        $('#unx').css('display', 'inline');
-                        $('#unx').text('X' + unerr);
-                    }
-                    var pwerr = result.fail['bad-password'];
-                    if (pwerr) {
-                        $('#pwx').css('display', 'inline');
-                        $('#pwx').text('X' + pwerr);
-                    }
-                    endSubmit();
                 }
-            }).error(function() {
-                endSubmit();
             });
         }
         
         function logout() {
             $.post('/auth/logout', {
                 username: login
-            }, function (result) {
-                refreshCaptcha();
+            }).done(function (result) {
+                refresh();
             });
         }
 
         $(function() {
             $('#un').focus();
             $(document).keyup(enter);
-            $("#img").click(refreshCaptcha);
+            $("#img").click(refresh);
             $('#reg').click(submitRegister);
             $('#logout').click(logout);
-            refreshCaptcha();
+            refresh();
         });
 
     </script>
@@ -141,6 +173,9 @@
             width: 500px;
             border: 3px outset purple;
             background: papayawhip;
+        }
+        .hide {
+            display: none;
         }
     </style>
 </head>
