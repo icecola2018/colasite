@@ -1,10 +1,10 @@
-var conf = require('../../../config');
+var path = require('path');
 var bcrypt = require('bcrypt');
 var debug = require('debug')('app:user');
 
 var fs = require('fs');
 
-var dbpath = conf.userdb;
+var dbpath = path.join(__dirname, '../../../../user.json');
 var db = {};
 var updated = false;
 var writing = false;

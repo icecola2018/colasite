@@ -3,12 +3,11 @@ var debug = require('debug')('app:server');
 var http = require('http');
 var path = require("path");
 
-var conf = require('../app/config');
-
-app.set('port', conf.port);
+var port = parseInt(process.env.PORT, 10);
+port = (isNaN(port) ? port : (port >= 0 ? port : false)) || '8080';
 
 var server = http.createServer(app);
-server.listen(conf.port);
+server.listen(port);
 
 server.on('error', function(error) {
     if (error.syscall !== 'listen') {

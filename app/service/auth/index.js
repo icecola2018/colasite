@@ -22,10 +22,13 @@ var getStatus = function (req, res) {
 };
 
 module.exports = {
-    init: checkSession,
-    status: getStatus,
-    captcha: captcha,
-    register: register,
-    login: login,
-    logout:logout
-}
+    routeService: {
+        init: checkSession,
+        status: getStatus,
+        captcha: captcha,
+        register: register,
+        login: login,
+        logout: logout
+    },
+    session: sess.auth
+};

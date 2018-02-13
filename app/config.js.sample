@@ -1,7 +1,0 @@
-var path = require('path');
-var config = {
-    port: '8080',
-    userdb: path.join(__dirname, '..', 'user.json')
-};
-
-module.exports = config;
